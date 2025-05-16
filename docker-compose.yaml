@@ -1,0 +1,26 @@
+services:
+  tlg_front:
+    build:
+      context: ./tlg_front/
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: >
+      sh -c "echo 'Waiting for PostgreSQL to be ready...' &&
+            python -m db.wait_for_db &&
+            python3 main.py
+            "
+
+  db:
+    image: postgres
+    env_file:
+      - .env
+    ports:
+      - ${POSTGRES_PORT_HOST}:5432
+    volumes:
+      - db_data:${PGDATA}
+
+volumes:
+  db_data:

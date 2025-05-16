@@ -1,0 +1,1 @@
+1. when user sends a first message (command 'start') - POST ...api/user/
