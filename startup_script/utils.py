@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse
+import re
 import socket
 import subprocess
 import sys
@@ -90,11 +90,14 @@ def run_django_commands(
         for cmd in text_commands:
             commands[command_begin + tuple(cmd.split())] = text_commands[cmd]
 
-
     last_command = None
     for cmd, desc in commands.items():
-        if "runserver" in " ".join(cmd):
+        command_line = " ".join(cmd)
+        if "runserver" in command_line:
             last_command = cmd
+            if (port := re.search(r":(\d+)", command_line)) and is_port_in_use(int(port.group(1))):
+                print(f"\nПомилка: Порт {port.group(1)} вже зайнятий. Сервер не запустився.")
+                sys.exit(1)
             continue
         try:
             print(f"\nВиконання команди: {desc}...")
@@ -102,6 +105,7 @@ def run_django_commands(
         except subprocess.CalledProcessError as e:
             print(f"Помилка при виконанні {desc}: {e.stderr}")
             sys.exit(1)
+
     if last_command:
         print(f"\nВиконання команди: {commands[last_command]}...")
         try:
@@ -110,46 +114,12 @@ def run_django_commands(
             if process.poll() is not None:
                 print(f"Помилка: Django-сервер не запустився (код завершення: {process.returncode}).")
                 sys.exit(1)
-            print(f"Команду {commands[last_command]} запущено у фоновому режимі.")
+            print(f"Команду {commands[last_command]} запущено у фоновому режимі (PID: {process.pid}).")
         except Exception as e:
             print(f"Помилка при виконанні {last_command}: {e.stderr}")
             sys.exit(1)
 
 
-def local_start():
-    """Головна функція скрипта."""
-    # Налаштування аргументів командного рядка
-    parser = argparse.ArgumentParser(description="Запуск Docker і Django-застосунку")
-    parser.add_argument(
-        "--compose-file",
-        type=str,
-        default="docker-compose.local.yaml",
-        help="Шлях до docker-compose файлу (за замовчуванням: docker-compose.local.yaml)"
-    )
-    parser.add_argument(
-        "--env-file",
-        type=str,
-        default=".env.local",
-        help="Шлях до файлу змінних середовища (за замовчуванням: .env.local)"
-    )
-    args = parser.parse_args()
-
-    # Налаштування кодування консолі
-    if sys.stdout.encoding.lower() != "utf-8":
-        sys.stdout.reconfigure(encoding="utf-8")
-
-    # Завантаження змінних середовища
-    load_environment()
-
-    # Перевірка Docker
-    check_docker()
-
-    # Запуск docker-compose
-    run_docker_compose(args.compose_file)
-
-    # Очікування бази даних
-    wait_for_db()
-
-    # Виконання Django-команд
-    run_django_commands()
-
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0

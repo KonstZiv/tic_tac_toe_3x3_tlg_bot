@@ -5,7 +5,7 @@ local:
 
 how to run:
 ```bash
->>> python -m 
+>>> python -m startup_script.local_start
 ```
 
 all settings in DEBUG mode
