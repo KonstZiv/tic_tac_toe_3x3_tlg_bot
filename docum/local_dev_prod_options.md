@@ -3,6 +3,11 @@ local:
 - tlg_front starts in container, ports 8000:8000. works with bot_backend: localhost:8000
 - db starts in container, ports 5432:5432
 
+how to run:
+```bash
+>>> python -m 
+```
+
 all settings in DEBUG mode
 .env.local
 docker-compose.local.yml

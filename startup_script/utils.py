@@ -93,7 +93,7 @@ def run_django_commands(
 
     last_command = None
     for cmd, desc in commands.items():
-        if "runserver" in cmd:
+        if "runserver" in " ".join(cmd):
             last_command = cmd
             continue
         try:
@@ -105,8 +105,13 @@ def run_django_commands(
     if last_command:
         print(f"\nВиконання команди: {commands[last_command]}...")
         try:
-            subprocess.run(last_command, check=True, text=True)
-        except subprocess.CalledProcessError as e:
+            process = subprocess.Popen(last_command, text=True, stdout=sys.stdout, stderr=sys.stderr)
+            time.sleep(1)
+            if process.poll() is not None:
+                print(f"Помилка: Django-сервер не запустився (код завершення: {process.returncode}).")
+                sys.exit(1)
+            print(f"Команду {commands[last_command]} запущено у фоновому режимі.")
+        except Exception as e:
             print(f"Помилка при виконанні {last_command}: {e.stderr}")
             sys.exit(1)
 
@@ -148,6 +153,3 @@ def local_start():
     # Виконання Django-команд
     run_django_commands()
 
-
-if __name__ == "__main__":
-    local_start()
