@@ -1,6 +1,6 @@
 from psycopg import OperationalError
-from db.connection import create_connection
-from settings import Settings
+from .connection import create_connection
+from tg_front.settings import Settings
 
 
 def execute_query(settings: Settings, query: str):

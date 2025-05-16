@@ -5,8 +5,8 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram import html, Dispatcher
 
-from db.execute import execute_query
-from settings import settings
+from tg_front.db.execute import execute_query
+from tg_front.settings import settings
 
 # All handlers should be attached to the Router (or Dispatcher)
 
