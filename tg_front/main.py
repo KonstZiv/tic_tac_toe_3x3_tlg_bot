@@ -7,11 +7,14 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from settings import settings
-from src.echobot import dp
+from src.tic_tac_toe_bot import dp
+
+from src.utils import add_aiohttp_client_session, close_aiohttp_client_session
 
 # Bot token can be obtained via https://t.me/BotFather
 TOKEN = settings.BOT_TOKEN
-
+dp.startup.register(add_aiohttp_client_session)
+dp.shutdown.register(close_aiohttp_client_session)
 
 
 async def main() -> None:

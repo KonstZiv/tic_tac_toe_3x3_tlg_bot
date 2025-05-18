@@ -14,12 +14,21 @@ class Settings:
         self.POSTGRES_HOST = os.environ.get("POSTGRES_HOST_CONTAINER")
         self.POSTGRES_PORT = int(os.environ.get("POSTGRES_PORT_CONTAINER"))
 
+        # Django API
+        self.DJANGO_HOST = os.environ.get("DJANGO_HOST")
+        self.DJANGO_PORT = int(os.environ.get("DJANGO_PORT"))
+
+
     def __repr__(self):
         return f"Settings(BOT_TOKEN={self.BOT_TOKEN}, BOT_NAME={self.BOT_NAME}, BOT_USERNAME={self.BOT_USERNAME}, POSTGRES_USER={self.POSTGRES_USER}, POSTGRES_PASSWORD={self.POSTGRES_PASSWORD}, POSTGRES_DB={self.POSTGRES_DB}, POSTGRES_HOST={self.POSTGRES_HOST}, POSTGRES_PORT={self.POSTGRES_PORT})"
 
     @property
     def db_url(self):
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    @property
+    def api_url(self):
+        return f"http://{self.DJANGO_HOST}:{self.DJANGO_PORT}/api/v1/"
 
 
 settings = Settings()

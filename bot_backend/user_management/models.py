@@ -71,3 +71,10 @@ class TgUser(models.Model):
             f"first_name: {self.tg_first_name}"
             + f" ({self.tg_id})"
         )
+
+class TgStartAttempt(models.Model):
+    tg_user = models.ForeignKey(TgUser, on_delete=models.CASCADE, related_name="start_attempts")
+    attempt_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attempt 'start/' by {self.tg_user} at {self.attempt_time}"

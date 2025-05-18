@@ -3,11 +3,13 @@ from rest_framework import routers
 
 from .views import TgUserViewSet
 
-app_name = "user_management"
+app_name = "api_user_management"
 
 router = routers.DefaultRouter()
+# Register the TgUserViewSet with the router
+router.register("tgusers", TgUserViewSet, basename="tgusers")
 
-router.register("tgusers", TgUserViewSet, basename="tguser")
+
 urlpatterns = [
     path("", include(router.urls)),
 ]

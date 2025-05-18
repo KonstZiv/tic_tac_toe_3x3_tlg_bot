@@ -1,5 +1,13 @@
-def tg_user_list(request):
+from rest_framework import viewsets
+
+from .models import TgUser
+from .serializers import TgUserSerializer
+
+
+class TgUserViewSet(viewsets.ModelViewSet):
     """
-    List all tg_users, or create a new tg_user.
+    API endpoint that allows users to be viewed or edited.
     """
-    ...
+    queryset = TgUser.objects.all()
+    serializer_class = TgUserSerializer
+    
