@@ -8,9 +8,7 @@ services:
     depends_on:
       - db
     command: >
-      sh -c "
-            python3 main.py
-            "
+      sh -c "python3 main.py"
 
   db:
     image: postgres

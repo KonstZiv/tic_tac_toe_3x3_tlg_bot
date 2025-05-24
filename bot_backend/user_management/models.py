@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import models
+from django.contrib.contenttypes.fields import GenericRelation
+from django.db import models, transaction, DatabaseError
 from django.utils.translation import gettext_lazy as _
 
 
@@ -38,6 +39,20 @@ class User(AbstractUser):
         db_index=True,
     )
 
+    player1_games = GenericRelation(
+        'tictactoe.Game',
+        content_type_field='player1_content_type',
+        object_id_field='player1_object_id',
+        related_query_name='user_player1_games'
+    )
+
+    player2_games = GenericRelation(
+        'tictactoe.Game',
+        content_type_field='player2_content_type',
+        object_id_field='player2_object_id',
+        related_query_name='user_player2_games'
+    )
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -50,6 +65,11 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.email})" if self.username else self.email
 
+    @property
+    def games(self):
+        """Об’єднує ігри, де користувач є player1 або player2"""
+        return self.player1_games.all() | self.player2_games.all()
+
 
 class TgUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="tlg_user", null=True)
@@ -59,11 +79,32 @@ class TgUser(models.Model):
     tg_username = models.CharField(max_length=255, blank=True, null=True)
     is_bot = models.BooleanField(default=False)
     language_code = models.CharField(max_length=10, blank=True, null=True)
-    is_premium = models.BooleanField(default=False)
-    added_to_attachment_menu = models.BooleanField(default=False)
+    is_premium = models.BooleanField(default=False, null=True)
+    added_to_attachment_menu = models.BooleanField(default=False, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+
+    # Зворотні зв’язки для ігор, де TgUser є player1
+    player1_games = GenericRelation(
+        'tictactoe.Game',
+        content_type_field='player1_content_type',
+        object_id_field='player1_object_id',
+        related_query_name='tguser_player1_games'
+    )
+
+    # Зворотні зв’язки для ігор, де TgUser є player2
+    player2_games = GenericRelation(
+        'tictactoe.Game',
+        content_type_field='player2_content_type',
+        object_id_field='player2_object_id',
+        related_query_name='tguser_player2_games'
+    )
+
+    @property
+    def games(self):
+        """Об’єднує ігри, де TgUser є player1 або player2"""
+        return self.player1_games.all() | self.player2_games.all()
 
     def __str__(self):
         return (
@@ -72,9 +113,27 @@ class TgUser(models.Model):
             + f" ({self.tg_id})"
         )
 
+    def save(self, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                tguser = super().save(*args, **kwargs)
+                attempt = TgStartAttempt.objects.create(tg_user=self)
+                attempt.save()
+                return tguser
+        except DatabaseError as e:
+            # Обробка помилки, якщо потрібно
+            print(f"Error saving TgUser with new TgStartAttempt: {e}")
+            raise
+
+
 class TgStartAttempt(models.Model):
     tg_user = models.ForeignKey(TgUser, on_delete=models.CASCADE, related_name="start_attempts")
     attempt_time = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Tg Start Attempt")
+        verbose_name_plural = _("Tg Start Attempts")
+        ordering = ["-attempt_time"]
 
     def __str__(self):
         return f"Attempt 'start/' by {self.tg_user} at {self.attempt_time}"

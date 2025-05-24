@@ -1,4 +1,7 @@
-psycopg==3.2.6
-psycopg-binary==3.2.6
-aiogram
+aiohttp==3.11.18
+aiogram==3.20.0.post0
+pydantic==2.11.4
+tic_tac_toe_3x3==1.0.4
+email_validator==2.2.0
+pydantic-settings==2.9.1
 

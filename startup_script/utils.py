@@ -84,7 +84,7 @@ def run_django_commands(
         commands = {
             command_begin + ("makemigrations",): "Створення міграцій",
             command_begin + ("migrate",): "Застосування міграцій",
-            command_begin + ("runserver", "localhost:8000",): "Запуск сервера: localhost:8000",
+            command_begin + ("runserver", "0.0.0.0:8000",): "Запуск сервера: 0.0.0.0:8000",
         }
     else:
         for cmd in text_commands:

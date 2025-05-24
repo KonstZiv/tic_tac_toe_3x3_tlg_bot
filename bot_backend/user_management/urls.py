@@ -8,6 +8,7 @@ app_name = "user_management"
 router = routers.DefaultRouter()
 
 router.register("tgusers", TgUserViewSet, basename="tguser")
+
 urlpatterns = [
     path("", include(router.urls)),
 ]

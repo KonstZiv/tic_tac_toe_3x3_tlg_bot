@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,7 +26,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "change-this-default-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.environ.get("ENV") in ("local", "dev") else False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*", "host.docker.internal", "localhost"]
 
 # Application definition
 
@@ -83,6 +85,9 @@ DATABASES = {
         "PORT": os.environ.get("POSTGRES_PORT_HOST", "5432"),
     }
 }
+import pprint
+
+pprint.pprint(f"Database settings: {DATABASES}")
 
 AUTH_USER_MODEL = "user_management.User"
 

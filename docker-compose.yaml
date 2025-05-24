@@ -1,7 +1,7 @@
 services:
-  tlg_front:
+  tg_front:
     build:
-      context: ./tlg_front/
+      context: ./tg_front/
       dockerfile: Dockerfile
     env_file:
       - .env
