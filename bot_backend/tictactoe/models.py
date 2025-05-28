@@ -1,11 +1,138 @@
+from datetime import timedelta
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from user_management.models import TgUser, User
+
+
+def default_expires_at(period=timedelta(days=7)):
+    """Повертає дату, що на 7 днів пізніше від поточної."""
+    return timezone.now() + period
+
+
+class TicTacToeProposition(models.Model):
+    # Поля для player1 (ініціатор запрошення, обов’язкове)
+    player1_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name='player1_propositions',
+        limit_choices_to={'model__in': ('user_management.user', 'user_management.tguser')},
+    )
+    player1_object_id = models.PositiveIntegerField()
+    player1 = GenericForeignKey('player1_content_type', 'player1_object_id')
+
+    # Поля для player2 (може бути null, якщо запрошення ще не прийнято)
+    player2_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name='player2_propositions',
+        limit_choices_to={'model__in': ('user_management.user', 'user_management.tguser')},
+        null=True,
+        blank=True,
+    )
+    player2_object_id = models.PositiveIntegerField(null=True, blank=True)
+    player2 = GenericForeignKey('player2_content_type', 'player2_object_id')
+
+    # Визначає, хто ходить першим: True - player1, False - player2, None - не визначено
+    player1_first = models.BooleanField(null=True, blank=True, default=None, verbose_name=_("player1 goes first"))
+
+    # Знаки гравців (можуть бути null, якщо не визначено)
+    player1_sign = models.CharField(
+        max_length=1,
+        choices=[('❌', 'Cross'), ('⭕', 'Nought')],
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name=_("player1 sign"),
+    )
+    player2_sign = models.CharField(
+        max_length=1,
+        choices=[('❌', 'Cross'), ('⭕', 'Nought')],
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name=_("player2 sign"),
+    )
+
+    # Час створення пропозиції
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("created at"))
+
+    # Час прийняття пропозиції (null, якщо ще не прийнято)
+    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("accepted at"))
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('accepted', 'Accepted'),
+            ('rejected', 'Rejected'),
+            ('incomplete', 'Incomplete')
+        ],
+        default='pending'
+    )
+
+    # Час закінчення терміну дії пропозиції (7 днів від created_at за замовчуванням)
+    expires_at = models.DateTimeField(
+        default=default_expires_at,
+        verbose_name=_("expires at"),
+        help_text=_("The date and time when the proposition expires (default: 7 days from creation).")
+    )
+
+    class Meta:
+        verbose_name = _("TicTacToe proposition")
+        verbose_name_plural = _("TicTacToe propositions")
+        indexes = [
+            models.Index(fields=['player1_object_id']),
+            models.Index(fields=['player2_object_id']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['accepted_at']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    def __str__(self):
+        player2_str = str(self.player2) if self.player2 else "Not accepted"
+        status = "Accepted" if self.accepted_at else "Pending"
+        return f"Proposition {self.id}: {self.player1} vs {player2_str} ({status})"
+
+    def clean(self):
+        """Валідація моделі."""
+        # Перевірка, що player1 не дорівнює player2
+        if (
+                self.player2_content_type
+                and self.player1_content_type == self.player2_content_type
+                and self.player1_object_id == self.player2_object_id
+        ):
+            raise ValidationError(_("Player 1 and Player 2 cannot be the same."))
+
+        # Перевірка, що знаки гравців різні, якщо обидва вказані
+        if self.player1_sign and self.player2_sign and self.player1_sign == self.player2_sign:
+            raise ValidationError(_("Player 1 and Player 2 must have different signs."))
+
+        # Перевірка, що знаки коректні, якщо вказані
+        valid_signs = [choice[0] for choice in self._meta.get_field('player1_sign').choices]
+        if self.player1_sign and self.player1_sign not in valid_signs:
+            raise ValidationError(_("Invalid sign selected for Player 1."))
+        if self.player2_sign and self.player2_sign not in valid_signs:
+            raise ValidationError(_("Invalid sign selected for Player 2."))
+
+        # Перевірка, що accepted_at встановлено лише якщо є player2
+        if self.accepted_at and not self.player2:
+            raise ValidationError(_("Accepted timestamp cannot be set without Player 2."))
+
+        # Перевірка, що expires_at не раніше created_at
+        if self.expires_at and self.created_at and self.expires_at < self.created_at:
+            raise ValidationError(_("Expiration date cannot be earlier than creation date."))
+
+    def save(self, *args, **kwargs):
+        """Автоматична валідація перед збереженням."""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Game(models.Model):
@@ -77,5 +204,6 @@ class GameState(models.Model):
         default=" " * 9,
         validators=[RegexValidator(regex=r"^[\sX0]{9}$", message=_("Must contain 9 cells of: X, 0(null), or space"))]
     )
-    parent_state = models.OneToOneField("self", null=True, blank=True, on_delete=models.CASCADE, related_name='child_state')
+    parent_state = models.OneToOneField("self", null=True, blank=True, on_delete=models.CASCADE,
+                                        related_name='child_state')
     created_at = models.DateTimeField(auto_now_add=True)

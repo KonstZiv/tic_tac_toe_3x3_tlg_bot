@@ -8,7 +8,7 @@ async def get_tguser(
         bot: Bot,
         api_url: str = settings.api_url,
 ) -> dict:
-    url = f"{api_url}tgusers/{user.tg_id}/?format=json"
+    url = f"{api_url}users/tgusers/{user.tg_id}/?format=json"
     async with bot.http_session.get(url,) as response:
         return await response.json()
 
@@ -18,6 +18,6 @@ async def create_tguser(
         bot: Bot,
         api_url: str = settings.api_url,
 ) -> dict:
-    url = f"{api_url}tgusers/?format=json"
+    url = f"{api_url}users/tgusers/?format=json"
     async with bot.http_session.post(url, json=user.model_dump()) as response:
         return await response.json()

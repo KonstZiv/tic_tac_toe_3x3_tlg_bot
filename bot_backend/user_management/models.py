@@ -53,6 +53,19 @@ class User(AbstractUser):
         related_query_name='user_player2_games'
     )
 
+    player1_propositions = GenericRelation(
+        'tictactoe.TicTacToeProposition',
+        content_type_field='player1_content_type',
+        object_id_field='player1_object_id',
+        related_query_name='user_player1_propositions'
+    )
+    player2_propositions = GenericRelation(
+        'tictactoe.TicTacToeProposition',
+        content_type_field='player2_content_type',
+        object_id_field='player2_object_id',
+        related_query_name='user_player2_propositions'
+    )
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -99,6 +112,19 @@ class TgUser(models.Model):
         content_type_field='player2_content_type',
         object_id_field='player2_object_id',
         related_query_name='tguser_player2_games'
+    )
+
+    player1_propositions = GenericRelation(
+        'tictactoe.TicTacToeProposition',
+        content_type_field='player1_content_type',
+        object_id_field='player1_object_id',
+        related_query_name='tguser_player1_propositions'
+    )
+    player2_propositions = GenericRelation(
+        'tictactoe.TicTacToeProposition',
+        content_type_field='player2_content_type',
+        object_id_field='player2_object_id',
+        related_query_name='tguser_player2_propositions'
     )
 
     @property
