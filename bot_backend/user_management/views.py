@@ -24,7 +24,7 @@ class TgUserViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """
         Custom logic for POST request:
-        - Check if TgUser with given tg_id exists.
+        - Check if TgUser with given pk exists.
         - If exists, update fields that differ from the request data and create a new TgStartAttempt.
         - If does not exist, create a new TgUser (TgStartAttempt created via TgUser.save()).
         """
@@ -33,12 +33,12 @@ class TgUserViewSet(viewsets.ModelViewSet):
         validated_data = serializer.validated_data
 
         # Отримуємо tg_id із запиту
-        tg_id = validated_data.get('tg_id')
+        id_ = validated_data.get('pk') or validated_data.get('id')
 
         try:
             with transaction.atomic():
                 # Шукаємо існуючого користувача за tg_id
-                existing_user = TgUser.objects.get(tg_id=tg_id)
+                existing_user = TgUser.objects.get(id=id_)
 
                 # Оновлюємо поля, які відрізняються
                 update_fields = []

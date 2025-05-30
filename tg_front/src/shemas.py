@@ -3,8 +3,7 @@ from pydantic import BaseModel, Field
 
 
 class UserShema(BaseModel):
-    id: int | None = Field(default=None, description="User ID", gt=0)
-    tg_id: int = Field(..., description="User ID", gt=0)
+    id: int = Field(..., description="User ID", gt=0)
     tg_first_name: str = Field(..., description="User first name", max_length=255)
     tg_last_name: str | None = Field(default=None, description="User last name", max_length=255)
     tg_username: str | None = Field(default=None, description="User username", max_length=255)
@@ -21,7 +20,6 @@ class UserShema(BaseModel):
         """
         return cls(
             id=user_dict.get("id"),
-            tg_id=user_dict.get("id"),
             tg_first_name=user_dict.get("first_name"),
             tg_last_name=user_dict.get("last_name"),
             tg_username=user_dict.get("username"),
@@ -38,8 +36,7 @@ class UserShema(BaseModel):
         Create a User instance from an aiogram User object.
         """
         return cls(
-            id=None,  # ID will be set by the database
-            tg_id=user.id,
+            id=user.id,
             tg_first_name=user.first_name,
             tg_last_name=user.last_name,
             tg_username=user.username,

@@ -1,7 +1,12 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
+from django.core.validators import MinValueValidator
 from django.db import models, transaction, DatabaseError
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+
+from tictactoe.models import Game
 
 
 class UserManager(BaseUserManager):
@@ -27,6 +32,8 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    _content_type = None  # Для кешування ContentType
+
     username = models.CharField(
         verbose_name=_("username"),
         max_length=150,
@@ -66,6 +73,11 @@ class User(AbstractUser):
         related_query_name='user_player2_propositions'
     )
 
+    @property
+    def propositions(self):
+        """Об’єднує пропозиції, де User є player1 або player2"""
+        return self.player1_propositions.all() | self.player2_propositions.all()
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -78,15 +90,28 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.email})" if self.username else self.email
 
-    @property
-    def games(self):
-        """Об’єднує ігри, де користувач є player1 або player2"""
-        return self.player1_games.all() | self.player2_games.all()
+    @classmethod
+    def get_content_type(cls):
+        if cls._content_type is None:
+            cls._content_type = ContentType.objects.get_for_model(cls)
+        return cls._content_type
+
+    def get_games(self):
+        """Повертає всі ігри, де користувач є player1 або player2."""
+        content_type = self.get_content_type()
+        return Game.objects.filter(
+            Q(player1_content_type=content_type, player1_object_id=self.id) |
+            Q(player2_content_type=content_type, player2_object_id=self.id)
+        ).select_related('player1_content_type', 'player2_content_type').distinct()
 
 
 class TgUser(models.Model):
+    _content_type = None  # Для кешування ContentType
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="tlg_user", null=True)
-    tg_id = models.BigIntegerField(unique=True)
+    id = models.BigIntegerField(unique=True,
+                                primary_key=True,
+                                validators=[MinValueValidator(1, message="Telegram ID must be positive")])
     tg_first_name = models.CharField(max_length=255)
     tg_last_name = models.CharField(max_length=255, blank=True, null=True)
     tg_username = models.CharField(max_length=255, blank=True, null=True)
@@ -128,9 +153,23 @@ class TgUser(models.Model):
     )
 
     @property
-    def games(self):
-        """Об’єднує ігри, де TgUser є player1 або player2"""
-        return self.player1_games.all() | self.player2_games.all()
+    def propositions(self):
+        """Об’єднує пропозиції, де TgUser є player1 або player2"""
+        return self.player1_propositions.all() | self.player2_propositions.all()
+
+    @classmethod
+    def get_content_type(cls):
+        if cls._content_type is None:
+            cls._content_type = ContentType.objects.get_for_model(cls)
+        return cls._content_type
+
+    def get_games(self):
+        """Повертає всі ігри, де користувач є player1 або player2."""
+        content_type = self.get_content_type()
+        return Game.objects.filter(
+            Q(player1_content_type=content_type, player1_object_id=self.id) |
+            Q(player2_content_type=content_type, player2_object_id=self.id)
+        ).select_related('player1_content_type', 'player2_content_type').distinct()
 
     def __str__(self):
         return (
@@ -160,6 +199,9 @@ class TgStartAttempt(models.Model):
         verbose_name = _("Tg Start Attempt")
         verbose_name_plural = _("Tg Start Attempts")
         ordering = ["-attempt_time"]
+        indexes = [
+            models.Index(fields=['attempt_time'])
+        ]
 
     def __str__(self):
         return f"Attempt 'start/' by {self.tg_user} at {self.attempt_time}"

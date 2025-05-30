@@ -1,15 +1,18 @@
 from django.urls import path, include
-from rest_framework import routers
+from rest_framework_nested import routers
 
+from tictactoe.views import TicTacToePropositionViewSet
 from .views import TgUserViewSet
 
 app_name = "api_user_management"
 
-router = routers.DefaultRouter()
-# Register the TgUserViewSet with the router
+router = routers.SimpleRouter()
 router.register("tgusers", TgUserViewSet, basename="tgusers")
 
+tgusers_router = routers.NestedSimpleRouter(router, "tgusers", lookup="tguser")
+tgusers_router.register("tictactoe-propositions", TicTacToePropositionViewSet, basename="tguser-tictactoe-propositions")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("", include(tgusers_router.urls)),
 ]

@@ -14,8 +14,8 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(TgUser)
 class TgUserAdmin(admin.ModelAdmin):
-    list_display = ("tg_id", "tg_first_name", "tg_last_name", "tg_username", "is_bot", "created_at", "updated_at",
+    list_display = ("id", "tg_first_name", "tg_last_name", "tg_username", "is_bot", "created_at", "updated_at",
                     "is_active")
-    search_fields = ("tg_id", "tg_first_name", "tg_last_name", "tg_username", "is_bot", "created_at", "updated_at")
+    search_fields = ("id", "tg_first_name", "tg_last_name", "tg_username", "is_bot", "created_at", "updated_at")
     ordering = ("created_at",)
     list_filter = ("is_bot", "created_at", "updated_at", "is_active")

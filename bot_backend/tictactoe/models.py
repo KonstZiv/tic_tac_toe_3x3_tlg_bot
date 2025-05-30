@@ -8,11 +8,9 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from user_management.models import TgUser, User
 
-
-def default_expires_at(period=timedelta(days=7)):
-    """Повертає дату, що на 7 днів пізніше від поточної."""
+def default_expires_at(period: timedelta = timedelta(days=7)):
+    """Повертає дату, що на заданий період пізніше від поточної. За замовчуванням період встановлюється 7 днів."""
     return timezone.now() + period
 
 
@@ -84,6 +82,8 @@ class TicTacToeProposition(models.Model):
         help_text=_("The date and time when the proposition expires (default: 7 days from creation).")
     )
 
+    is_active = models.BooleanField(default=True, verbose_name=_("is active"))
+
     class Meta:
         verbose_name = _("TicTacToe proposition")
         verbose_name_plural = _("TicTacToe propositions")
@@ -94,11 +94,23 @@ class TicTacToeProposition(models.Model):
             models.Index(fields=['accepted_at']),
             models.Index(fields=['expires_at']),
         ]
+        # Унікальність пропозиції: не можна створити дві однакові пропозиції з однаковими player1 і player2, якщо статус "pending"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['player1_content_type', 'player1_object_id', 'player2_content_type', 'player2_object_id'],
+                condition=models.Q(status='pending'),
+                name='unique_pending_proposition'
+            )
+        ]
 
     def __str__(self):
         player2_str = str(self.player2) if self.player2 else "Not accepted"
         status = "Accepted" if self.accepted_at else "Pending"
         return f"Proposition {self.id}: {self.player1} vs {player2_str} ({status})"
+
+    @property
+    def is_expired(self):
+        return self.expires_at < timezone.now() if self.expires_at else False
 
     def clean(self):
         """Валідація моделі."""
@@ -129,8 +141,18 @@ class TicTacToeProposition(models.Model):
         if self.expires_at and self.created_at and self.expires_at < self.created_at:
             raise ValidationError(_("Expiration date cannot be earlier than creation date."))
 
+        # Валідація status
+        if self.status == 'accepted' and (not self.player2 or not self.accepted_at):
+            raise ValidationError(_("Accepted status requires Player 2 and accepted_at to be set."))
+        if self.status in ['pending', 'incomplete'] and self.accepted_at:
+            raise ValidationError(_("Pending or incomplete status cannot have accepted_at set."))
+        if self.status == 'rejected' and self.accepted_at:
+            raise ValidationError(_("Rejected status cannot have accepted_at set."))
+
     def save(self, *args, **kwargs):
-        """Автоматична валідація перед збереженням."""
+        """Автоматична валідація перед збереженням та встановлення статусу 'incomplete' якщо пропозиція має незаповнені поля."""
+        if self.player2 is None or self.player1_first is None or self.player1_sign is None or self.player2_sign is None:
+            self.status = 'incomplete'
         self.full_clean()
         super().save(*args, **kwargs)
 
