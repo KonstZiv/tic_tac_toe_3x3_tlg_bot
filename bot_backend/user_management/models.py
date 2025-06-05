@@ -175,7 +175,7 @@ class TgUser(models.Model):
         return (
             f"username: {self.tg_username}" if self.tg_username else
             f"first_name: {self.tg_first_name}"
-            + f" ({self.tg_id})"
+            + f" ({self.id})"
         )
 
     def save(self, *args, **kwargs):

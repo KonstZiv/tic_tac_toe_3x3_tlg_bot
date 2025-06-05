@@ -5,13 +5,21 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
-def default_expires_at(period: timedelta = timedelta(days=7)):
-    """Повертає дату, що на заданий період пізніше від поточної. За замовчуванням період встановлюється 7 днів."""
-    return timezone.now() + period
+def get_data_expired(timestamp=None, period: timedelta = timedelta(days=7)):
+    """Функція для отримання дати закінчення терміну дії пропозиції (7 днів від створення)."""
+    if timestamp is None:
+        timestamp = timezone.now()
+    return timestamp + period
+
+
+class PossibleSign(models.TextChoices):
+    CROSS = '❌', _('Cross')
+    NOUGHT = '⭕', _('Nought')
 
 
 class TicTacToeProposition(models.Model):
@@ -20,7 +28,7 @@ class TicTacToeProposition(models.Model):
         ContentType,
         on_delete=models.CASCADE,
         related_name='player1_propositions',
-        limit_choices_to={'model__in': ('user_management.user', 'user_management.tguser')},
+        limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
     )
     player1_object_id = models.PositiveIntegerField()
     player1 = GenericForeignKey('player1_content_type', 'player1_object_id')
@@ -30,9 +38,9 @@ class TicTacToeProposition(models.Model):
         ContentType,
         on_delete=models.CASCADE,
         related_name='player2_propositions',
-        limit_choices_to={'model__in': ('user_management.user', 'user_management.tguser')},
         null=True,
         blank=True,
+        limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
     )
     player2_object_id = models.PositiveIntegerField(null=True, blank=True)
     player2 = GenericForeignKey('player2_content_type', 'player2_object_id')
@@ -43,7 +51,7 @@ class TicTacToeProposition(models.Model):
     # Знаки гравців (можуть бути null, якщо не визначено)
     player1_sign = models.CharField(
         max_length=1,
-        choices=[('❌', 'Cross'), ('⭕', 'Nought')],
+        choices=PossibleSign.choices,
         null=True,
         blank=True,
         default=None,
@@ -77,7 +85,7 @@ class TicTacToeProposition(models.Model):
 
     # Час закінчення терміну дії пропозиції (7 днів від created_at за замовчуванням)
     expires_at = models.DateTimeField(
-        default=default_expires_at,
+        default=get_data_expired,
         verbose_name=_("expires at"),
         help_text=_("The date and time when the proposition expires (default: 7 days from creation).")
     )
@@ -142,7 +150,12 @@ class TicTacToeProposition(models.Model):
             raise ValidationError(_("Expiration date cannot be earlier than creation date."))
 
         # Валідація status
-        if self.status == 'accepted' and (not self.player2 or not self.accepted_at):
+        if self.status == 'accepted' and (
+                not self.player2 or
+                not self.player2_sign or
+                not self.player1_sign or
+                self.player1_first is None
+        ):
             raise ValidationError(_("Accepted status requires Player 2 and accepted_at to be set."))
         if self.status in ['pending', 'incomplete'] and self.accepted_at:
             raise ValidationError(_("Pending or incomplete status cannot have accepted_at set."))
@@ -153,6 +166,8 @@ class TicTacToeProposition(models.Model):
         """Автоматична валідація перед збереженням та встановлення статусу 'incomplete' якщо пропозиція має незаповнені поля."""
         if self.player2 is None or self.player1_first is None or self.player1_sign is None or self.player2_sign is None:
             self.status = 'incomplete'
+        elif self.status == 'accepted' and not self.accepted_at:
+            self.accepted_at = timezone.now()
         self.full_clean()
         super().save(*args, **kwargs)
 

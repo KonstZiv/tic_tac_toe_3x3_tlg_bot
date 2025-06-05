@@ -32,12 +32,12 @@ class TgUserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        # Отримуємо tg_id із запиту
+        # Отримуємо id_ із запиту
         id_ = validated_data.get('pk') or validated_data.get('id')
 
         try:
             with transaction.atomic():
-                # Шукаємо існуючого користувача за tg_id
+                # Шукаємо існуючого користувача за id_
                 existing_user = TgUser.objects.get(id=id_)
 
                 # Оновлюємо поля, які відрізняються

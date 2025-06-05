@@ -85,7 +85,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
     def create(self, request, tguser_pk=None):
         """Створює нову пропозицію для TgUser."""
         try:
-            TgUser.objects.get(tg_id=tguser_pk)
+            TgUser.objects.get(id=tguser_pk)
         except TgUser.DoesNotExist:
             raise NotFound("TgUser not found.")
 
