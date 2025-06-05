@@ -9,10 +9,15 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import logging
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -83,11 +88,13 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "default_password"),
         "HOST": os.environ.get("POSTGRES_HOST_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT_HOST", "5432"),
+        "TEST": {
+            "NAME": os.environ.get("POSTGRES_TEST_DB", "test_database_name"),
+        },
     }
 }
-import pprint
 
-pprint.pprint(f"Database settings: {DATABASES}")
+logger.info(f"Database configuration: {DATABASES}")
 
 AUTH_USER_MODEL = "user_management.User"
 
