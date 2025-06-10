@@ -7,7 +7,7 @@ from user_management.serializers import PlayerSerializer
 from .models import TicTacToeProposition
 
 
-class TicTacToePropositionSerializer(serializers.ModelSerializer):
+class TicTacToePropositionGetSerializer(serializers.ModelSerializer):
     player1 = PlayerSerializer(read_only=True)
     player2 = PlayerSerializer(read_only=True, allow_null=True)
     deep_links = serializers.SerializerMethodField(read_only=True)

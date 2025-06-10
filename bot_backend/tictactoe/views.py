@@ -8,11 +8,11 @@ from rest_framework.response import Response
 
 from user_management.models import TgUser
 from .models import TicTacToeProposition
-from .serializers import TicTacToePropositionSerializer, TicTacToePropositionFilterSerializer
+from .serializers import TicTacToePropositionGetSerializer, TicTacToePropositionFilterSerializer
 
 
 class TicTacToePropositionViewSet(viewsets.ModelViewSet):
-    serializer_class = TicTacToePropositionSerializer
+    serializer_class = TicTacToePropositionGetSerializer
 
     @extend_schema(
         parameters=[TicTacToePropositionFilterSerializer],
