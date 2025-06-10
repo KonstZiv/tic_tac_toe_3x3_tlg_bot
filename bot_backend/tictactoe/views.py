@@ -32,12 +32,9 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
             Q(player2_content_type=content_type, player2_object_id=tguser_id),
             is_active=True
         )
-        print(f"Query params: {self.request.query_params}")
         filter_serializer = TicTacToePropositionFilterSerializer(data=self.request.query_params)
         is_valid_result = filter_serializer.is_valid(raise_exception=True)
-        print(f"filter_serializer.is_valid(): {is_valid_result}")
         filters = filter_serializer.validated_data
-        print(f"filters: {filters}")
 
         # Фільтрація
         if 'statuses' in filters and filters["statuses"]:

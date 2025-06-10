@@ -58,3 +58,20 @@ class TicTacToePropositionViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]['player1']["id"], self.tguser.id)
+        response2 = self.client.get(url, {'is_player1': 'false'})
+        self.assertEqual(response2.status_code, 200)
+        self.assertEqual(len(response2.data["results"]), 1)
+        self.assertEqual(response2.data["results"][0]['player2']["id"], self.tguser.id)
+
+    def test_filter_by_expired(self):
+        url = reverse('api_user_management:tguser-tictactoe-propositions-list', kwargs={'tguser_pk': self.tguser.id})
+        response_without = self.client.get(url)
+        self.assertEqual(response_without.status_code, 200)
+        self.assertEqual(len(response_without.data["results"]), 2)
+        response_expired_true = self.client.get(url, {'expired': 'true'})
+        self.assertEqual(len(response_expired_true.data["results"]), 1)
+        self.assertEqual(response_expired_true.data["results"][0]['id'], self.proposition2.id)
+        response_expired_false = self.client.get(url, {'expired': 'false'})
+        self.assertEqual(len(response_expired_false.data["results"]), 1)
+        self.assertEqual(response_expired_false.data["results"][0]['id'], self.proposition.id)
+
