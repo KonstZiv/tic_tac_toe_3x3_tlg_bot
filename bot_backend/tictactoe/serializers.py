@@ -7,7 +7,7 @@ from user_management.serializers import PlayerSerializer
 from .models import TicTacToeProposition
 
 
-class TicTacToePropositionSerializer(serializers.ModelSerializer):
+class TicTacToePropositionGetSerializer(serializers.ModelSerializer):
     player1 = PlayerSerializer(read_only=True)
     player2 = PlayerSerializer(read_only=True, allow_null=True)
     deep_links = serializers.SerializerMethodField(read_only=True)
@@ -56,3 +56,58 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
             'telegram': telegram_link,
             'web': web_link
         }
+
+
+class CommaSeparatedChoiceListField(serializers.ListField):
+    """
+        Кастомне поле для обробки comma-separated значень у query-параметрах.
+        Валідує кожен елемент як ChoiceField.
+        """
+
+    def __init__(self, choices, **kwargs):
+        self.choices = choices
+        super().__init__(child=serializers.ChoiceField(choices=choices), **kwargs)
+
+    def to_internal_value(self, data):
+        # Якщо data є списком, обробляємо кожен елемент
+        if isinstance(data, list):
+            # Розбиваємо кожен елемент, якщо він містить коми
+            items = []
+            for item in data:
+                if isinstance(item, str):
+                    items.extend([i.strip() for i in item.split(',') if i.strip()])
+                else:
+                    items.append(item)
+            data = items
+        # Якщо data є рядком, розбиваємо його за комами
+        elif isinstance(data, str):
+            data = [item.strip() for item in data.split(',') if item.strip()]
+        return super().to_internal_value(data)
+
+
+class TicTacToePropositionFilterSerializer(serializers.Serializer):
+    statuses = CommaSeparatedChoiceListField(
+        choices=[s[0] for s in TicTacToeProposition._meta.get_field('status').choices],
+        required=False,
+        allow_empty=True,
+        help_text=(
+            "Filter by proposition status (comma-separated - e.g., '?statuses=pending,accepted,declined'). "
+            "If not specified - values for all statuses are returned."
+        )
+    )
+    is_player1 = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Filter by whether the user is player1 (true) or player2 (false). "
+            "If not specified - returns values where user is either player1 or player2"
+        )
+    )
+    expired = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Filter by whether the proposition is expired (true) or not (false). "
+            "If not specified - returns values for both expired and not expired propositions."
+        )
+    )

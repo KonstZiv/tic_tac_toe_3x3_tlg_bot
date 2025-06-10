@@ -1,17 +1,26 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, status
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from user_management.models import TgUser
 from .models import TicTacToeProposition
-from .serializers import TicTacToePropositionSerializer
+from .serializers import TicTacToePropositionGetSerializer, TicTacToePropositionFilterSerializer
 
 
 class TicTacToePropositionViewSet(viewsets.ModelViewSet):
-    serializer_class = TicTacToePropositionSerializer
+    serializer_class = TicTacToePropositionGetSerializer
+
+    @extend_schema(
+        parameters=[TicTacToePropositionFilterSerializer],
+        description="Retrieve Tic Tac Toe propositions for a specific TgUser.",
+
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         tguser_id = self.kwargs.get('tguser_pk')
@@ -23,43 +32,28 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
             Q(player2_content_type=content_type, player2_object_id=tguser_id),
             is_active=True
         )
+        filter_serializer = TicTacToePropositionFilterSerializer(data=self.request.query_params)
+        is_valid_result = filter_serializer.is_valid(raise_exception=True)
+        filters = filter_serializer.validated_data
 
-        # Фільтрація за параметрами
-        status_filter = self.request.query_params.get('status')
-        is_player1 = self.request.query_params.get('is_player1')
-        is_accepted = self.request.query_params.get('is_accepted')
-        expired = self.request.query_params.get('expired')
+        # Фільтрація
+        if 'statuses' in filters and filters["statuses"]:
+            queryset = queryset.filter(status__in=filters['statuses'])
 
-        if status_filter:
-            valid_statuses = [s[0] for s in TicTacToeProposition._meta.get_field('status').choices]
-            statuses = status_filter.split(',')
-            invalid_statuses = [s for s in statuses if s not in valid_statuses]
-            if invalid_statuses:
-                raise ValidationError(f"Invalid status values: {invalid_statuses}")
-            queryset = queryset.filter(status__in=statuses)
-
-        if is_player1 is not None:
-            is_player1 = is_player1.lower() == 'true'
-            if is_player1:
+        if filters['is_player1'] is not None:
+            if filters['is_player1']:
                 queryset = queryset.filter(player1_content_type=content_type, player1_object_id=tguser_id)
             else:
                 queryset = queryset.filter(player2_content_type=content_type, player2_object_id=tguser_id)
 
-        if is_accepted is not None:
-            is_accepted = is_accepted.lower() == 'true'
-            if is_accepted:
-                queryset = queryset.filter(accepted_at__isnull=False)
-            else:
-                queryset = queryset.filter(accepted_at__isnull=True)
-
-        if expired is not None:
-            expired = expired.lower() == 'true'
-            if expired:
+        if filters['expired'] is not None:
+            if filters['expired']:
                 queryset = queryset.filter(expires_at__lt=timezone.now())
             else:
                 queryset = queryset.filter(expires_at__gte=timezone.now())
 
-        return queryset.select_related('player1_content_type', 'player2_content_type')
+        queryset = queryset.select_related('player1_content_type', 'player2_content_type')
+        return queryset
 
     def get_object(self):
         tguser_id = self.kwargs.get('tguser_pk')

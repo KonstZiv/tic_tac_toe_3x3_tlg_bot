@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import logging
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "user_management",
     "tictactoe",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -139,5 +141,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 50
+    'PAGE_SIZE': 50,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'TicTacToe API',
+    'DESCRIPTION': 'API for managing TicTacToe.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }

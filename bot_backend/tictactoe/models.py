@@ -30,7 +30,7 @@ class TicTacToeProposition(models.Model):
         related_name='player1_propositions',
         limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
     )
-    player1_object_id = models.PositiveIntegerField()
+    player1_object_id = models.PositiveBigIntegerField()
     player1 = GenericForeignKey('player1_content_type', 'player1_object_id')
 
     # Поля для player2 (може бути null, якщо запрошення ще не прийнято)
@@ -42,7 +42,7 @@ class TicTacToeProposition(models.Model):
         blank=True,
         limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
     )
-    player2_object_id = models.PositiveIntegerField(null=True, blank=True)
+    player2_object_id = models.PositiveBigIntegerField(null=True, blank=True)
     player2 = GenericForeignKey('player2_content_type', 'player2_object_id')
 
     # Визначає, хто ходить першим: True - player1, False - player2, None - не визначено
@@ -59,7 +59,7 @@ class TicTacToeProposition(models.Model):
     )
     player2_sign = models.CharField(
         max_length=1,
-        choices=[('❌', 'Cross'), ('⭕', 'Nought')],
+        choices=PossibleSign.choices,
         null=True,
         blank=True,
         default=None,
