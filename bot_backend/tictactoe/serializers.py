@@ -7,18 +7,11 @@ from user_management.serializers import PlayerSerializer
 from .models import TicTacToeProposition
 
 
-class TicTacToePropositionGetSerializer(serializers.ModelSerializer):
-    player1 = PlayerSerializer(read_only=True)
-    player2 = PlayerSerializer(read_only=True, allow_null=True)
-    deep_links = serializers.SerializerMethodField(read_only=True)
-
+class TicTacToePropositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TicTacToeProposition
-        fields = [
-            'id', 'player1', 'player2', 'player1_first', 'player1_sign', 'player2_sign',
-            'created_at', 'accepted_at', 'status', 'expires_at', 'deep_links'
-        ]
-        read_only_fields = ['created_at', 'player1', 'accepted_at', 'status']
+        fields = '__all__'
+        read_only_fields = ['created_at', 'status', 'id']
 
     def validate_expires_at(self, value):
         """Перевіряє, що expires_at не раніше поточного часу."""
@@ -35,18 +28,30 @@ class TicTacToePropositionGetSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Створює пропозицію з player1, визначеним із контексту."""
-        print(f"Context: {self.context}")
         request = self.context.get('request')
-        tguser_id = self.context.get('tguser_pk')
-        content_type = ContentType.objects.get_for_model(TgUser)
+        player1_object_id = self.context.get('player1_object_id')
+        player1_content_type = ContentType.objects.get_for_model(TgUser)
 
         proposition = TicTacToeProposition(
-            player1_content_type=content_type,
-            player1_object_id=tguser_id,
+            player1_content_type=player1_content_type,
+            player1_object_id=player1_object_id,
             **validated_data
         )
         proposition.save()
         return proposition
+
+
+class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
+    player1 = PlayerSerializer(read_only=True)
+    player2 = PlayerSerializer(read_only=True, allow_null=True)
+    deep_links = serializers.SerializerMethodField(read_only=True)
+
+    class Meta(TicTacToePropositionSerializer.Meta):
+        fields = [
+            'id', 'player1', 'player2', 'player1_first', 'player1_sign', 'player2_sign',
+            'created_at', 'accepted_at', 'status', 'expires_at', 'deep_links'
+        ]
+        read_only_fields = ['created_at', 'player1', 'accepted_at', 'status', 'id']
 
     def get_deep_links(self, obj):
         """Повертає глибокі посилання для Telegram і веб-застосунку."""

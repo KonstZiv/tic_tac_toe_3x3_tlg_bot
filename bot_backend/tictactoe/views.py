@@ -73,8 +73,10 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['tguser_pk'] = self.kwargs.get('tguser_pk')
+        context["player1_content_type"] = ContentType.objects.get_for_model(TgUser)
+        context["player1_object_id"] = self.kwargs.get('tguser_pk')
         return context
+
 
     def create(self, request, tguser_pk=None):
         """Створює нову пропозицію для TgUser."""
