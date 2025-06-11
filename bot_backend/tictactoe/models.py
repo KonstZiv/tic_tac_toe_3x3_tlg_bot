@@ -17,10 +17,6 @@ def get_data_expired(timestamp=None, period: timedelta = timedelta(days=7)):
     return timestamp + period
 
 
-class PossibleSign(models.TextChoices):
-    CROSS = '❌', _('Cross')
-    NOUGHT = '⭕', _('Nought')
-
 
 class TicTacToeProposition(models.Model):
     """
@@ -34,6 +30,10 @@ class TicTacToeProposition(models.Model):
         ('incomplete', 'Incomplete'),
         ('completed', 'Completed'),
     )
+
+    class PossibleSign(models.TextChoices):
+        CROSS = '❌', _('Cross')
+        NOUGHT = '⭕', _('Nought')
 
     # Поля для player1 (ініціатор запрошення, обов’язкове)
     player1_content_type = models.ForeignKey(

@@ -152,5 +152,6 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'ENUM_NAME_OVERRIDES': {
         'TicTacToePropositionStatus': 'tictactoe.models.TicTacToeProposition.STATUS_CHOICES',
+        'TicTacToeSignEnum': 'tictactoe.models.TicTacToeProposition.PossibleSign.choices',
     },
 }

@@ -36,6 +36,16 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
         """
         Перевіряє, що знаки гравців (player1_sign, player2_sign) різні, якщо вони вказані.
         """
+        if data["player1_sign"] and data["player1_sign"] not in self.Meta.model.PossibleSign.values:
+            raise serializers.ValidationError(
+                f"Invalid player1_sign: {data['player1_sign']}. "
+                f"Must be one of {list(self.Meta.model.PossibleSign.values())}."
+            )
+        if data.get('player2_sign') and data['player2_sign'] not in self.Meta.model.PossibleSign.values:
+            raise serializers.ValidationError(
+                f"Invalid player2_sign: {data['player2_sign']}. "
+                f"Must be one of {list(self.Meta.model.PossibleSign.values())}."
+            )
         if data.get('player2_sign') or data.get('player1_sign'):
             if data['player1_sign'] == data['player2_sign']:
                 raise serializers.ValidationError("Player 1 and Player 2 must have different signs.")
