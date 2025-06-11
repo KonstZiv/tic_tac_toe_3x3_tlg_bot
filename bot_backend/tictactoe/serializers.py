@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from user_management.models import TgUser
@@ -7,8 +8,18 @@ from user_management.serializers import PlayerSerializer
 from .models import TicTacToeProposition
 
 
+@extend_schema_serializer(
+    component_name='Базовий серіалізатор для пропозицій гри в хрестики-нулики.',
+)
 class TicTacToePropositionSerializer(serializers.ModelSerializer):
-    deep_links = serializers.SerializerMethodField(read_only=True)
+    """
+    Базовий серіалізатор для роботи з об’єктами TicTacToeProposition.
+    Використовується як основа для GET і POST-серіалізації.
+    """
+    deep_links = serializers.SerializerMethodField(
+        read_only=True,
+        help_text='Глибокі посилання для доступу до пропозиції через Telegram або веб.'
+    )
 
     class Meta:
         model = TicTacToeProposition
@@ -16,13 +27,15 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'status', 'id']
 
     def validate_expires_at(self, value):
-        """Перевіряє, що expires_at не раніше поточного часу."""
+        """Перевіряє, що expires_at не є в минулому."""
         if value and value < timezone.now():
             raise serializers.ValidationError("Expiration date cannot be in the past.")
         return value
 
     def validate(self, data):
-        """Додаткова валідація для створення/оновлення."""
+        """
+        Перевіряє, що знаки гравців (player1_sign, player2_sign) різні, якщо вони вказані.
+        """
         if data.get('player2_sign') or data.get('player1_sign'):
             if data['player1_sign'] == data['player2_sign']:
                 raise serializers.ValidationError("Player 1 and Player 2 must have different signs.")
@@ -51,7 +64,15 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
         }
 
 
+@extend_schema_serializer(
+    component_name=(
+            "Серіалізатор для отримання деталей пропозиції гри в хрестики-нулики."
+            "Включає інформацію про гравців та глибокі посилання."),
+)
 class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
+    """
+    Серіалізатор для операцій читання (GET-запитів). Додає деталі гравців (player1, player2).
+    """
     player1 = PlayerSerializer(read_only=True)
     player2 = PlayerSerializer(read_only=True, allow_null=True)
 
@@ -63,7 +84,17 @@ class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
         read_only_fields = ['created_at', 'player1', 'accepted_at', 'status', 'id']
 
 
+@extend_schema_serializer(
+    component_name=(
+            'Серіалізатор для створення або оновлення пропозицій гри (POST/PUT/PATCH). '
+            'Дозволяє вказати параметри для player2 та налаштування гри.'
+    ),
+)
 class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
+    """
+    Серіалізатор для операцій створення/оновлення (POST/PUT/PATCH).
+    Включає поля для player2 та налаштування гри.
+    """
     player2_content_type_id = serializers.IntegerField(
         help_text="Content type ID for player2 (e.g., TgUser).",
         required=False,
@@ -77,6 +108,7 @@ class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
 
     class Meta(TicTacToePropositionSerializer.Meta):
         fields = [
+            'id',
             'player2_content_type_id',
             'player2_object_id',
             'player1_first',
@@ -84,10 +116,15 @@ class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
             'player2_sign',
             'expires_at',
             'deep_links',
+            'status',
+            'created_at',
         ]
-        read_only_fields = ['deep_links']
+        read_only_fields = ['deep_links', 'id', 'created_at', 'status']
 
     def validate(self, data):
+        """
+        Перевіряє, що player2_content_type_id і player2_object_id вказані разом або обидва відсутні.
+        """
         player2_content_type_id = data.get('player2_content_type_id')
         player2_object_id = data.get('player2_object_id')
         if (player2_content_type_id and not player2_object_id) or (not player2_content_type_id and player2_object_id):
@@ -96,7 +133,9 @@ class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
         return super().validate(data)
 
     def create(self, validated_data):
-        """Створює пропозицію з player1, визначеним із контексту."""
+        """
+        Створює пропозицію з player1, визначеним із контексту, і player2 із validated_data (якщо є).
+        """
         player1_object_id = self.context.get('player1_object_id')
         player1_content_type = self.context.get('player1_content_type')
 
@@ -121,10 +160,13 @@ class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
         return proposition
 
 
+@extend_schema_serializer(
+    component_name='Поле для обробки списків значень, розділених комами, з валідацією через choices.',
+)
 class CommaSeparatedChoiceListField(serializers.ListField):
     """
         Кастомне поле для обробки comma-separated значень у query-параметрах.
-        Валідує кожен елемент як ChoiceField.
+        Валідує кожен елемент як ChoiceField із заданими choices.
         """
 
     def __init__(self, choices, **kwargs):
@@ -148,7 +190,14 @@ class CommaSeparatedChoiceListField(serializers.ListField):
         return super().to_internal_value(data)
 
 
+@extend_schema_serializer(
+    component_name='Серіалізатор для фільтрації GET-запитів до пропозицій гри.',
+)
 class TicTacToePropositionFilterSerializer(serializers.Serializer):
+    """
+    Серіалізатор для валідації GET-параметрів при фільтрації пропозицій.
+    Підтримує фільтрацію за статусом, роллю гравця та терміном дії.
+    """
     statuses = CommaSeparatedChoiceListField(
         choices=[s[0] for s in TicTacToeProposition._meta.get_field('status').choices],
         required=False,

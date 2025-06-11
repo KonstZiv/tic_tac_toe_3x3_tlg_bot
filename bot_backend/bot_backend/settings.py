@@ -150,4 +150,7 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API for managing TicTacToe.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'ENUM_NAME_OVERRIDES': {
+        'TicTacToePropositionStatus': 'tictactoe.models.TicTacToeProposition.STATUS_CHOICES',
+    },
 }

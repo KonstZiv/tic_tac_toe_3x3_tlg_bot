@@ -23,14 +23,29 @@ class PossibleSign(models.TextChoices):
 
 
 class TicTacToeProposition(models.Model):
+    """
+    Модель пропозиції гри в хрестики-нулики для користувачів Telegram.
+    Зберігає інформацію про гравців, налаштування гри та статус пропозиції.
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+        ('incomplete', 'Incomplete'),
+        ('completed', 'Completed'),
+    )
+
     # Поля для player1 (ініціатор запрошення, обов’язкове)
     player1_content_type = models.ForeignKey(
         ContentType,
         on_delete=models.CASCADE,
         related_name='player1_propositions',
         limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
+        help_text='ContentType об’єкта для гравця 1 (наприклад, TgUser).'
     )
-    player1_object_id = models.PositiveBigIntegerField()
+    player1_object_id = models.PositiveBigIntegerField(
+        help_text='ID об’єкта гравця 1 (наприклад, Telegram ID).'
+    )
     player1 = GenericForeignKey('player1_content_type', 'player1_object_id')
 
     # Поля для player2 (може бути null, якщо запрошення ще не прийнято)
@@ -41,12 +56,23 @@ class TicTacToeProposition(models.Model):
         null=True,
         blank=True,
         limit_choices_to=Q(app_label='user_management', model='user') | Q(app_label='user_management', model='tguser'),
+        help_text='ContentType для гравця 2 (може бути null).',
     )
-    player2_object_id = models.PositiveBigIntegerField(null=True, blank=True)
+    player2_object_id = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        help_text='ID об’єкта гравця 2 (може бути null).',
+    )
     player2 = GenericForeignKey('player2_content_type', 'player2_object_id')
 
     # Визначає, хто ходить першим: True - player1, False - player2, None - не визначено
-    player1_first = models.BooleanField(null=True, blank=True, default=None, verbose_name=_("player1 goes first"))
+    player1_first = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name=_("player1 goes first"),
+        help_text='Вказує, чи ходить гравець 1 першим.',
+    )
 
     # Знаки гравців (можуть бути null, якщо не визначено)
     player1_sign = models.CharField(
@@ -56,6 +82,7 @@ class TicTacToeProposition(models.Model):
         blank=True,
         default=None,
         verbose_name=_("player1 sign"),
+        help_text='Знак гравця 1 (наприклад, "❌" або "⭕").'
     )
     player2_sign = models.CharField(
         max_length=1,
@@ -64,33 +91,44 @@ class TicTacToeProposition(models.Model):
         blank=True,
         default=None,
         verbose_name=_("player2 sign"),
+        help_text='Знак гравця 2 (наприклад, "❌" або "⭕").'
     )
 
     # Час створення пропозиції
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("created at"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("created at"),
+        help_text='Дата створення пропозиції.',
+    )
 
     # Час прийняття пропозиції (null, якщо ще не прийнято)
-    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("accepted at"))
+    accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("accepted at"),
+        help_text='Дата прийняття пропозиції (може бути null).',
+    )
 
     status = models.CharField(
         max_length=20,
-        choices=[
-            ('pending', 'Pending'),
-            ('accepted', 'Accepted'),
-            ('rejected', 'Rejected'),
-            ('incomplete', 'Incomplete')
-        ],
-        default='pending'
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name=_("statuses"),
+        help_text='Статус пропозиції (pending, accepted, declined, incomplete, completed).',
     )
 
     # Час закінчення терміну дії пропозиції (7 днів від created_at за замовчуванням)
     expires_at = models.DateTimeField(
         default=get_data_expired,
         verbose_name=_("expires at"),
-        help_text=_("The date and time when the proposition expires (default: 7 days from creation).")
+        help_text='Дата закінчення терміну дії пропозиції (може бути null - буде встановлено +7 днів від поточної).'
     )
 
-    is_active = models.BooleanField(default=True, verbose_name=_("is active"))
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("is active"),
+        help_text='Вказує, чи є пропозиція активною.',
+    )
 
     class Meta:
         verbose_name = _("TicTacToe proposition")

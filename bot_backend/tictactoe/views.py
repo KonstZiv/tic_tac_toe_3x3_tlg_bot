@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -13,15 +13,107 @@ from .serializers import TicTacToePropositionGetSerializer, TicTacToeProposition
 
 
 class TicTacToePropositionViewSet(viewsets.ModelViewSet):
-    serializer_class = TicTacToePropositionGetSerializer
+    """
+    ViewSet для управління пропозиціями гри в хрестики-нулики для користувачів Telegram.
+    Дозволяє створювати, отримувати, оновлювати та деактивувати пропозиції.
+    """
 
     @extend_schema(
-        parameters=[TicTacToePropositionFilterSerializer],
-        description="Retrieve Tic Tac Toe propositions for a specific TgUser.",
-
+        parameters=[
+            TicTacToePropositionFilterSerializer,
+            OpenApiParameter(
+                name='tguser_pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='Telegram ID користувача, для якого повертаються пропозиції.',
+                required=True,
+            ),
+        ],
+        description=(
+                'Повертає список активних пропозицій гри в хрестики-нулики для вказаного користувача Telegram. '
+                'Підтримує фільтрацію за статусом, роллю гравця та терміном дії.'
+        ),
+        responses={
+            200: TicTacToePropositionGetSerializer(many=True),
+            404: None,
+        },
+        examples=[
+            OpenApiExample(
+                name='Успішна відповідь',
+                value=[
+                    {
+                        'id': 1,
+                        'player1': {'id': 12345678, 'first_name': 'John', 'last_name': None, 'username': '@john'},
+                        'player2': None,
+                        'player1_first': True,
+                        'player1_sign': '❌',
+                        'player2_sign': '⭕',
+                        'created_at': '2025-06-11T15:00:00Z',
+                        'accepted_at': None,
+                        'status': 'incomplete',
+                        'expires_at': '2025-06-18T12:00:00Z',
+                        'deep_links': {
+                            'telegram': 'https://t.me/YourBotName?start=proposition_1',
+                            'web': 'https://yourapp.com/tictactoe/proposition/1'
+                        }
+                    }
+                ],
+                response_only=True,
+                status_codes=['200'],
+            ),
+        ]
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='tguser_pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='Telegram ID користувача.',
+                required=True,
+            ),
+            OpenApiParameter(
+                name='pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='ID пропозиції.',
+                required=True,
+            ),
+        ],
+        description='Повертає деталі конкретної активної пропозиції для вказаного користувача.',
+        responses={
+            200: TicTacToePropositionGetSerializer,
+            404: None,
+        },
+        examples=[
+            OpenApiExample(
+                name='Успішна відповідь',
+                value={
+                    'id': 1,
+                    'player1': {'id': 12345678, 'first_name': 'John', 'last_name': None, 'username': '@john'},
+                    'player2': None,
+                    'player1_first': True,
+                    'player1_sign': '❌',
+                    'player2_sign': '⭕',
+                    'created_at': '2025-06-11T15:00:00Z',
+                    'accepted_at': None,
+                    'status': 'pending',
+                    'expires_at': '2025-06-18T12:00:00Z',
+                    'deep_links': {
+                        'telegram': 'https://t.me/YourBotName?start=proposition_1',
+                        'web': 'https://yourapp.com/tictactoe/proposition/1'
+                    }
+                },
+                response_only=True,
+                status_codes=['200'],
+            ),
+        ]
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
     def get_queryset(self):
         tguser_id = self.kwargs.get('tguser_pk')
@@ -92,6 +184,59 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
             return TicTacToePropositionGetSerializer(*args, **kwargs)
         return super().get_serializer(*args, **kwargs)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='tguser_pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='Telegram ID користувача, який створює пропозицію.',
+                required=True,
+            ),
+        ],
+        request=TicTacToePropositionPostSerializer,
+        description=(
+                'Створює нову пропозицію гри в хрестики-нулики для вказаного користувача Telegram. '
+                'Користувач автоматично встановлюється як player1.'
+        ),
+        responses={
+            201: TicTacToePropositionPostSerializer,
+            400: None,
+            404: None,
+        },
+        examples=[
+            OpenApiExample(
+                name='Успішний запит',
+                value={
+                    'player1_first': True,
+                    'player1_sign': '❌',
+                    'player2_sign': '⭕',
+                    'expires_at': '2025-06-18T12:00:00Z',
+                    'player2_content_type_id': 123,
+                    'player2_object_id': 987654321,
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name='Успішна відповідь',
+                value={
+                    'id': 1,
+                    'player1_first': True,
+                    'player1_sign': '❌',
+                    'player2_sign': '⭕',
+                    'expires_at': '2025-06-18T12:00:00Z',
+                    'player2_content_type_id': 123,
+                    'player2_object_id': 987654321,
+                    'deep_links': {
+                        'telegram': 'https://t.me/YourBotName?start=proposition_1',
+                        'web': 'https://yourapp.com/tictactoe/proposition/1'
+                    }
+                },
+                response_only=True,
+                status_codes=['201'],
+            ),
+        ]
+    )
     def create(self, request, tguser_pk=None):
         """Створює нову пропозицію для TgUser."""
         try:
@@ -105,6 +250,29 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='tguser_pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='Telegram ID користувача.',
+                required=True,
+            ),
+            OpenApiParameter(
+                name='pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='ID пропозиції.',
+                required=True,
+            ),
+        ],
+        description='Деактивує пропозицію гри, встановлюючи is_active=False.',
+        responses={
+            204: None,
+            404: None,
+        }
+    )
     def destroy(self, request, tguser_pk=None, pk=None):
         """Деактивує пропозицію (is_active = False)."""
         proposition = self.get_object()
@@ -112,6 +280,44 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         proposition.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='tguser_pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='Telegram ID користувача.',
+                required=True,
+            ),
+            OpenApiParameter(
+                name='pk',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='ID пропозиції.',
+                required=True,
+            ),
+        ],
+        request=TicTacToePropositionPostSerializer,
+        description=(
+                'Оновлює існуючу пропозицію гри (PUT або PATCH). '
+                'Дозволяє часткове оновлення через PATCH.'
+        ),
+        responses={
+            200: TicTacToePropositionPostSerializer,
+            400: None,
+            404: None,
+        },
+        examples=[
+            OpenApiExample(
+                name='Часткове оновлення (PATCH)',
+                value={
+                    'player2_sign': '⭕',
+                    'expires_at': '2025-06-20T12:00:00Z',
+                },
+                request_only=True,
+            ),
+        ]
+    )
     def update(self, request, tguser_pk=None, pk=None, partial=False):
         """Оновлює пропозицію (PUT або PATCH)."""
         proposition = self.get_object()
