@@ -54,7 +54,7 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
         proposition.save()
         return proposition
 
-    def get_deep_links(self, obj):
+    def get_deep_links(self, obj) -> dict[str, str]:
         """Повертає глибокі посилання для Telegram і веб-застосунку."""
         telegram_link = f"https://t.me/YourBotName?start=proposition_{obj.id}"
         web_link = f"https://yourapp.com/tictactoe/proposition/{obj.id}"
