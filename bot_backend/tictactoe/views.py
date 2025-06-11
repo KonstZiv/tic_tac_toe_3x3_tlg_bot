@@ -8,7 +8,8 @@ from rest_framework.response import Response
 
 from user_management.models import TgUser
 from .models import TicTacToeProposition
-from .serializers import TicTacToePropositionGetSerializer, TicTacToePropositionFilterSerializer
+from .serializers import TicTacToePropositionGetSerializer, TicTacToePropositionFilterSerializer, \
+    TicTacToePropositionPostSerializer
 
 
 class TicTacToePropositionViewSet(viewsets.ModelViewSet):
@@ -75,8 +76,21 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context["player1_content_type"] = ContentType.objects.get_for_model(TgUser)
         context["player1_object_id"] = self.kwargs.get('tguser_pk')
+        try:
+            context["player2_content_type"] = ContentType.objects.get_for_model(TgUser)
+            context["player1_object"] = TgUser.objects.get(id=context["player1_object_id"])
+        except TgUser.DoesNotExist:
+            raise NotFound("TgUser not found.")
         return context
 
+    def get_serializer(self, *args, **kwargs):
+        """Повертає серіалізатор для отримання пропозицій."""
+        kwargs['context'] = self.get_serializer_context()
+        if self.action in ['create', 'update']:
+            return TicTacToePropositionPostSerializer(*args, **kwargs)
+        elif self.action in ['list', 'retrieve']:
+            return TicTacToePropositionGetSerializer(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
 
     def create(self, request, tguser_pk=None):
         """Створює нову пропозицію для TgUser."""

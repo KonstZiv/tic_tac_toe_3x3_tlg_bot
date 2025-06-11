@@ -8,6 +8,8 @@ from .models import TicTacToeProposition
 
 
 class TicTacToePropositionSerializer(serializers.ModelSerializer):
+    deep_links = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = TicTacToeProposition
         fields = '__all__'
@@ -21,14 +23,13 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Додаткова валідація для створення/оновлення."""
-        if 'player2_sign' in data and 'player1_sign' in data:
+        if data.get('player2_sign') or data.get('player1_sign'):
             if data['player1_sign'] == data['player2_sign']:
                 raise serializers.ValidationError("Player 1 and Player 2 must have different signs.")
         return data
 
     def create(self, validated_data):
         """Створює пропозицію з player1, визначеним із контексту."""
-        request = self.context.get('request')
         player1_object_id = self.context.get('player1_object_id')
         player1_content_type = ContentType.objects.get_for_model(TgUser)
 
@@ -40,19 +41,6 @@ class TicTacToePropositionSerializer(serializers.ModelSerializer):
         proposition.save()
         return proposition
 
-
-class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
-    player1 = PlayerSerializer(read_only=True)
-    player2 = PlayerSerializer(read_only=True, allow_null=True)
-    deep_links = serializers.SerializerMethodField(read_only=True)
-
-    class Meta(TicTacToePropositionSerializer.Meta):
-        fields = [
-            'id', 'player1', 'player2', 'player1_first', 'player1_sign', 'player2_sign',
-            'created_at', 'accepted_at', 'status', 'expires_at', 'deep_links'
-        ]
-        read_only_fields = ['created_at', 'player1', 'accepted_at', 'status', 'id']
-
     def get_deep_links(self, obj):
         """Повертає глибокі посилання для Telegram і веб-застосунку."""
         telegram_link = f"https://t.me/YourBotName?start=proposition_{obj.id}"
@@ -61,6 +49,76 @@ class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
             'telegram': telegram_link,
             'web': web_link
         }
+
+
+class TicTacToePropositionGetSerializer(TicTacToePropositionSerializer):
+    player1 = PlayerSerializer(read_only=True)
+    player2 = PlayerSerializer(read_only=True, allow_null=True)
+
+    class Meta(TicTacToePropositionSerializer.Meta):
+        fields = [
+            'id', 'player1', 'player2', 'player1_first', 'player1_sign', 'player2_sign',
+            'created_at', 'accepted_at', 'status', 'expires_at', 'deep_links'
+        ]
+        read_only_fields = ['created_at', 'player1', 'accepted_at', 'status', 'id']
+
+
+class TicTacToePropositionPostSerializer(TicTacToePropositionSerializer):
+    player2_content_type_id = serializers.IntegerField(
+        help_text="Content type ID for player2 (e.g., TgUser).",
+        required=False,
+        allow_null=True,
+    )
+    player2_object_id = serializers.IntegerField(
+        help_text="Object ID for player2 (e.g., TgUser ID).",
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta(TicTacToePropositionSerializer.Meta):
+        fields = [
+            'player2_content_type_id',
+            'player2_object_id',
+            'player1_first',
+            'player1_sign',
+            'player2_sign',
+            'expires_at',
+            'deep_links',
+        ]
+        read_only_fields = ['deep_links']
+
+    def validate(self, data):
+        player2_content_type_id = data.get('player2_content_type_id')
+        player2_object_id = data.get('player2_object_id')
+        if (player2_content_type_id and not player2_object_id) or (not player2_content_type_id and player2_object_id):
+            raise serializers.ValidationError(
+                "Both player2_content_type_id and player2_object_id must be provided or both omitted.")
+        return super().validate(data)
+
+    def create(self, validated_data):
+        """Створює пропозицію з player1, визначеним із контексту."""
+        player1_object_id = self.context.get('player1_object_id')
+        player1_content_type = self.context.get('player1_content_type')
+
+        if not player1_object_id or not player1_content_type:
+            raise serializers.ValidationError("Player1 content type and object ID must be provided in context.")
+
+        # Отримуємо player2 з validated_data
+        player2_content_type_id = validated_data.pop('player2_content_type_id', None)
+        player2_object_id = validated_data.pop('player2_object_id', None)
+
+        if (player2_content_type_id and not player2_object_id) or (not player2_content_type_id and player2_object_id):
+            raise serializers.ValidationError("Both player2_content_type_id and player2_object_id are required.")
+
+        proposition = TicTacToeProposition(
+            player1_content_type=player1_content_type,
+            player1_object_id=player1_object_id,
+            player2_content_type_id=player2_content_type_id,
+            player2_object_id=player2_object_id,
+            **validated_data
+        )
+        proposition.save()
+        return proposition
 
 
 class CommaSeparatedChoiceListField(serializers.ListField):
