@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
 from tictactoe.models import TicTacToeProposition
 from user_management.models import User, TgUser
@@ -157,3 +158,90 @@ class TicTacToePropositionTestCase(TestCase):
         self.assertEqual(
             proposition.status, TicTacToeProposition.PossibleStatus.INCOMPLETE
         )
+
+    def test_unique_pending_incomplete_proposition(self):
+        """Checks that two offers cannot be created with the same players and pending/incomplete status."""
+        # Create a first proposition with two players and status pending
+        TicTacToeProposition.objects.create(
+            player1_content_type=self.tg_user_content_type,
+            player1_object_id=self.tg_user.id,
+            player2_content_type=self.user_content_type,
+            player2_object_id=self.user.id,
+            status="pending",
+            player1_sign="❌",
+            player2_sign="⭕",
+            player1_first=True,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Create a second proposition with the same players and status pending
+        with self.assertRaises(ValidationError):
+            TicTacToeProposition.objects.create(
+                player1_content_type=self.tg_user_content_type,
+                player1_object_id=self.tg_user.id,
+                player2_content_type=self.user_content_type,
+                player2_object_id=self.user.id,
+                status="pending",
+                player1_sign="❌",
+                player2_sign="⭕",
+                player1_first=True,
+                expires_at=timezone.now() + timedelta(days=7),
+            )
+
+    def test_no_unique_constraint_with_null_player2(self):
+        """Checks that the constraint does not apply if player2_object_id is NULL."""
+        # Create a proposition with player1 only
+        TicTacToeProposition.objects.create(
+            player1_content_type=self.tg_user_content_type,
+            player1_object_id=self.tg_user.id,
+            status="pending",
+            player1_sign="❌",
+            player1_first=True,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Створюємо другу пропозицію без player2
+        TicTacToeProposition.objects.create(
+            player1_content_type=self.tg_user_content_type,
+            player1_object_id=self.tg_user.id,
+            status="pending",
+            player1_sign="❌",
+            player1_first=True,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Перевіряємо, що обидві пропозиції створені
+        self.assertEqual(TicTacToeProposition.objects.count(), 2)
+
+    def test_no_unique_constraint_with_accepted_status(self):
+        """Checks that the restriction does not apply to statuses other than pending/incomplete."""
+        # Create a first proposition with two players and status accepted
+        TicTacToeProposition.objects.create(
+            player1_content_type=self.tg_user_content_type,
+            player1_object_id=self.tg_user.id,
+            player2_content_type=self.user_content_type,
+            player2_object_id=self.user.id,
+            status="accepted",
+            player1_sign="❌",
+            player2_sign="⭕",
+            player1_first=True,
+            accepted_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Створюємо другу пропозицію зі статусом accepted
+        TicTacToeProposition.objects.create(
+            player1_content_type=self.tg_user_content_type,
+            player1_object_id=self.tg_user.id,
+            player2_content_type=self.user_content_type,
+            player2_object_id=self.user.id,
+            status="accepted",
+            player1_sign="❌",
+            player2_sign="⭕",
+            player1_first=True,
+            accepted_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Перевіряємо, що обидві пропозиції створені
+        self.assertEqual(TicTacToeProposition.objects.count(), 2)
