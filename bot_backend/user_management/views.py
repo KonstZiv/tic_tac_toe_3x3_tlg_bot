@@ -3,14 +3,15 @@ from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 
-from .models import TgUser, TgStartAttempt
-from .serializers import TgUserSerializer
+from .models import TgUser, TgStartAttempt, User
+from .serializers import TgUserSerializer, UserSerializer
 
 
 class TgUserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
+
     queryset = TgUser.objects.all()
     serializer_class = TgUserSerializer
 
@@ -33,7 +34,7 @@ class TgUserViewSet(viewsets.ModelViewSet):
         validated_data = serializer.validated_data
 
         # Отримуємо id_ із запиту
-        id_ = validated_data.get('pk') or validated_data.get('id')
+        id_ = validated_data.get("pk") or validated_data.get("id")
 
         try:
             with transaction.atomic():
@@ -57,11 +58,31 @@ class TgUserViewSet(viewsets.ModelViewSet):
                 # Серіалізуємо оновлений об’єкт для відповіді
                 serializer = self.get_serializer(existing_user)
                 headers = self.get_success_headers(serializer.data)
-                return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
+                return Response(
+                    serializer.data, status=status.HTTP_200_OK, headers=headers
+                )
 
         except ObjectDoesNotExist:
             # Якщо користувача немає, створюємо нового
             # Метод save() моделі TgUser автоматично створить TgStartAttempt
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED, headers=headers
+            )
+
+
+class WebUserViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        """
+        Restricted this action.
+        Return status code 405 - Method Not Allowed
+        """
+        return self.http_method_not_allowed(request, *args, **kwargs)

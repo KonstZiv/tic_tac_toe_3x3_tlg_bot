@@ -204,18 +204,13 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
             raise NotFound("TgUser not found.")
         return context
 
-    def get_serializer(
-        self, *args, **kwargs
-    ) -> TicTacToePropositionPostSerializer | TicTacToePropositionGetSerializer:
-        """Returns a serializer for receiving proposals.
-        Chooses the serializer based on the action being performed.
-        """
-        kwargs["context"] = self.get_serializer_context()
+    def get_serializer_class(self):
+        """Returns the appropriate serializer class based on the action."""
         if self.action in ["create", "update"]:
-            return TicTacToePropositionPostSerializer(*args, **kwargs)
+            return TicTacToePropositionPostSerializer
         elif self.action in ["list", "retrieve"]:
-            return TicTacToePropositionGetSerializer(*args, **kwargs)
-        return super().get_serializer(*args, **kwargs)
+            return TicTacToePropositionGetSerializer
+        return super().get_serializer_class()
 
     @extend_schema(
         parameters=[
@@ -223,14 +218,14 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
                 name="tguser_pk",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="Telegram ID користувача, який створює пропозицію.",
+                description="Telegram ID of the user creating the offer.",
                 required=True,
             ),
         ],
         request=TicTacToePropositionPostSerializer,
         description=(
-            "Створює нову пропозицію гри в хрестики-нулики для вказаного користувача Telegram. "
-            "Користувач автоматично встановлюється як player1."
+            "Creates a new tic-tac-toe game offer for the specified Telegram user. "
+            "The user is automatically set as player1."
         ),
         responses={
             201: TicTacToePropositionPostSerializer,
@@ -239,7 +234,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         },
         examples=[
             OpenApiExample(
-                name="Успішний запит",
+                name="Successful request",
                 value={
                     "player1_first": True,
                     "player1_sign": "❌",
@@ -251,7 +246,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
                 request_only=True,
             ),
             OpenApiExample(
-                name="Успішна відповідь",
+                name="Successful response",
                 value={
                     "id": 1,
                     "player1_first": True,
@@ -271,7 +266,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         ],
     )
     def create(self, request, tguser_pk=None):
-        """Створює нову пропозицію для TgUser."""
+        """Creates a new offer for TgUser."""
         try:
             TgUser.objects.get(id=tguser_pk)
         except TgUser.DoesNotExist:
@@ -291,25 +286,25 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
                 name="tguser_pk",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="Telegram ID користувача.",
+                description="Telegram user ID.",
                 required=True,
             ),
             OpenApiParameter(
                 name="pk",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="ID пропозиції.",
+                description="TicTacToeProposition ID.",
                 required=True,
             ),
         ],
-        description="Деактивує пропозицію гри, встановлюючи is_active=False.",
+        description="Deactivates the TicTacToeProposition by setting is_active=False.",
         responses={
             204: None,
             404: None,
         },
     )
     def destroy(self, request, tguser_pk=None, pk=None):
-        """Деактивує пропозицію (is_active = False)."""
+        """Deactivates the TicTacToeProposition by setting is_active=False."""
         proposition = self.get_object()
         proposition.is_active = False
         proposition.save()
@@ -321,21 +316,21 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
                 name="tguser_pk",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="Telegram ID користувача.",
+                description="Telegram user ID.",
                 required=True,
             ),
             OpenApiParameter(
                 name="pk",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="ID пропозиції.",
+                description="TicTacToeProposition ID.",
                 required=True,
             ),
         ],
         request=TicTacToePropositionPostSerializer,
         description=(
-            "Оновлює існуючу пропозицію гри (PUT або PATCH). "
-            "Дозволяє часткове оновлення через PATCH."
+            "Updates an existing game offering (PUT or PATCH). "
+            "Allows partial updates via PATCH."
         ),
         responses={
             200: TicTacToePropositionPostSerializer,
@@ -344,7 +339,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         },
         examples=[
             OpenApiExample(
-                name="Часткове оновлення (PATCH)",
+                name="Partial update request",
                 value={
                     "player2_sign": "⭕",
                     "expires_at": "2025-06-20T12:00:00Z",
@@ -354,7 +349,7 @@ class TicTacToePropositionViewSet(viewsets.ModelViewSet):
         ],
     )
     def update(self, request, tguser_pk=None, pk=None, partial=False):
-        """Оновлює пропозицію (PUT або PATCH)."""
+        """Updates an existing TicTacToeProposition."""
         proposition = self.get_object()
         serializer = self.get_serializer(
             proposition, data=request.data, partial=partial

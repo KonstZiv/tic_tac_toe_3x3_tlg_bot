@@ -21,8 +21,8 @@ class UserManager(BaseUserManager):
         return user
 
     def create_user(self, email, password=None, **extra_fields):
-        extra_fields['is_staff'] = False
-        extra_fields['is_superuser'] = False
+        extra_fields["is_staff"] = False
+        extra_fields["is_superuser"] = False
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email, password, **extra_fields):
@@ -47,30 +47,30 @@ class User(AbstractUser):
     )
 
     player1_games = GenericRelation(
-        'tictactoe.Game',
-        content_type_field='player1_content_type',
-        object_id_field='player1_object_id',
-        related_query_name='user_player1_games'
+        "tictactoe.Game",
+        content_type_field="player1_content_type",
+        object_id_field="player1_object_id",
+        related_query_name="user_player1_games",
     )
 
     player2_games = GenericRelation(
-        'tictactoe.Game',
-        content_type_field='player2_content_type',
-        object_id_field='player2_object_id',
-        related_query_name='user_player2_games'
+        "tictactoe.Game",
+        content_type_field="player2_content_type",
+        object_id_field="player2_object_id",
+        related_query_name="user_player2_games",
     )
 
     player1_propositions = GenericRelation(
-        'tictactoe.TicTacToeProposition',
-        content_type_field='player1_content_type',
-        object_id_field='player1_object_id',
-        related_query_name='user_player1_propositions'
+        "tictactoe.TicTacToeProposition",
+        content_type_field="player1_content_type",
+        object_id_field="player1_object_id",
+        related_query_name="user_player1_propositions",
     )
     player2_propositions = GenericRelation(
-        'tictactoe.TicTacToeProposition',
-        content_type_field='player2_content_type',
-        object_id_field='player2_object_id',
-        related_query_name='user_player2_propositions'
+        "tictactoe.TicTacToeProposition",
+        content_type_field="player2_content_type",
+        object_id_field="player2_object_id",
+        related_query_name="user_player2_propositions",
     )
 
     @property
@@ -78,7 +78,7 @@ class User(AbstractUser):
         """Об’єднує пропозиції, де User є player1 або player2"""
         return self.player1_propositions.all() | self.player2_propositions.all()
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -99,19 +99,27 @@ class User(AbstractUser):
     def get_games(self):
         """Повертає всі ігри, де користувач є player1 або player2."""
         content_type = self.get_content_type()
-        return Game.objects.filter(
-            Q(player1_content_type=content_type, player1_object_id=self.id) |
-            Q(player2_content_type=content_type, player2_object_id=self.id)
-        ).select_related('player1_content_type', 'player2_content_type').distinct()
+        return (
+            Game.objects.filter(
+                Q(player1_content_type=content_type, player1_object_id=self.id)
+                | Q(player2_content_type=content_type, player2_object_id=self.id)
+            )
+            .select_related("player1_content_type", "player2_content_type")
+            .distinct()
+        )
 
 
 class TgUser(models.Model):
     _content_type = None  # Для кешування ContentType
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="tlg_user", null=True)
-    id = models.BigIntegerField(unique=True,
-                                primary_key=True,
-                                validators=[MinValueValidator(1, message="Telegram ID must be positive")])
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="tlg_user", null=True
+    )
+    id = models.BigIntegerField(
+        unique=True,
+        primary_key=True,
+        validators=[MinValueValidator(1, message="Telegram ID must be positive")],
+    )
     tg_first_name = models.CharField(max_length=255)
     tg_last_name = models.CharField(max_length=255, blank=True, null=True)
     tg_username = models.CharField(max_length=255, blank=True, null=True)
@@ -125,31 +133,31 @@ class TgUser(models.Model):
 
     # Зворотні зв’язки для ігор, де TgUser є player1
     player1_games = GenericRelation(
-        'tictactoe.Game',
-        content_type_field='player1_content_type',
-        object_id_field='player1_object_id',
-        related_query_name='tguser_player1_games'
+        "tictactoe.Game",
+        content_type_field="player1_content_type",
+        object_id_field="player1_object_id",
+        related_query_name="tguser_player1_games",
     )
 
     # Зворотні зв’язки для ігор, де TgUser є player2
     player2_games = GenericRelation(
-        'tictactoe.Game',
-        content_type_field='player2_content_type',
-        object_id_field='player2_object_id',
-        related_query_name='tguser_player2_games'
+        "tictactoe.Game",
+        content_type_field="player2_content_type",
+        object_id_field="player2_object_id",
+        related_query_name="tguser_player2_games",
     )
 
     player1_propositions = GenericRelation(
-        'tictactoe.TicTacToeProposition',
-        content_type_field='player1_content_type',
-        object_id_field='player1_object_id',
-        related_query_name='tguser_player1_propositions'
+        "tictactoe.TicTacToeProposition",
+        content_type_field="player1_content_type",
+        object_id_field="player1_object_id",
+        related_query_name="tguser_player1_propositions",
     )
     player2_propositions = GenericRelation(
-        'tictactoe.TicTacToeProposition',
-        content_type_field='player2_content_type',
-        object_id_field='player2_object_id',
-        related_query_name='tguser_player2_propositions'
+        "tictactoe.TicTacToeProposition",
+        content_type_field="player2_content_type",
+        object_id_field="player2_object_id",
+        related_query_name="tguser_player2_propositions",
     )
 
     @property
@@ -166,16 +174,20 @@ class TgUser(models.Model):
     def get_games(self):
         """Повертає всі ігри, де користувач є player1 або player2."""
         content_type = self.get_content_type()
-        return Game.objects.filter(
-            Q(player1_content_type=content_type, player1_object_id=self.id) |
-            Q(player2_content_type=content_type, player2_object_id=self.id)
-        ).select_related('player1_content_type', 'player2_content_type').distinct()
+        return (
+            Game.objects.filter(
+                Q(player1_content_type=content_type, player1_object_id=self.id)
+                | Q(player2_content_type=content_type, player2_object_id=self.id)
+            )
+            .select_related("player1_content_type", "player2_content_type")
+            .distinct()
+        )
 
     def __str__(self):
         return (
-            f"username: {self.tg_username}" if self.tg_username else
-            f"first_name: {self.tg_first_name}"
-            + f" ({self.id})"
+            f"username: {self.tg_username}"
+            if self.tg_username
+            else f"first_name: {self.tg_first_name}" + f" ({self.id})"
         )
 
     def save(self, *args, **kwargs):
@@ -192,16 +204,16 @@ class TgUser(models.Model):
 
 
 class TgStartAttempt(models.Model):
-    tg_user = models.ForeignKey(TgUser, on_delete=models.CASCADE, related_name="start_attempts")
+    tg_user = models.ForeignKey(
+        TgUser, on_delete=models.CASCADE, related_name="start_attempts"
+    )
     attempt_time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = _("Tg Start Attempt")
         verbose_name_plural = _("Tg Start Attempts")
         ordering = ["-attempt_time"]
-        indexes = [
-            models.Index(fields=['attempt_time'])
-        ]
+        indexes = [models.Index(fields=["attempt_time"])]
 
     def __str__(self):
         return f"Attempt 'start/' by {self.tg_user} at {self.attempt_time}"
