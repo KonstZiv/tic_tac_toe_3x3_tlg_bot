@@ -167,8 +167,10 @@ class TicTacToeProposition(models.Model):
                     "player2_content_type",
                     "player2_object_id",
                 ],
-                condition=models.Q(status__in=("incomplete", "pending"))
-                and models.Q("player2__isnull=False"),
+                condition=(
+                    (models.Q(status="incomplete") | models.Q(status="pending"))
+                    & models.Q(player2_object_id__isnull=False)
+                ),
                 name="unique_pending_incomplete_proposition",
             )
         ]
@@ -215,7 +217,7 @@ class TicTacToeProposition(models.Model):
             )
 
         # Checking accepted_at and status consistency
-        if (self.status == self.PossibleStatus.ACCEPTED or not self.accepted_at) and (
+        if (self.status == self.PossibleStatus.ACCEPTED or self.accepted_at) and (
             not self.player2
             or not self.player2_sign
             or not self.player1_sign

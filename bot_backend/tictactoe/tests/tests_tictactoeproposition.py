@@ -3,7 +3,6 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from tictactoe.models import PossibleSign
 from tictactoe.models import TicTacToeProposition
 from user_management.models import User, TgUser
 
@@ -11,8 +10,12 @@ from user_management.models import User, TgUser
 class TicTacToePropositionTestCase(TestCase):
     def setUp(self):
         # Create a TicTacToeProposition instance for testing
-        self.user = User.objects.create_user(email="user@user.user", password="password")
+        self.user = User.objects.create_user(
+            email="user@user.user", password="password"
+        )
         self.tg_user = TgUser.objects.create(id=123456789, tg_username="tguser")
+        self.user_content_type = self.user.get_content_type()
+        self.tg_user_content_type = self.tg_user.get_content_type()
 
     def tearDown(self):
         # Clean up after each test
@@ -33,9 +36,11 @@ class TicTacToePropositionTestCase(TestCase):
         )
         self.assertEqual(proposition1.player1, self.user)
         self.assertIsNone(proposition1.player2)
-        self.assertEqual(proposition1.status, 'incomplete')
+        self.assertEqual(proposition1.status, "incomplete")
         self.assertIsNone(proposition1.accepted_at)
-        self.assertGreaterEqual((proposition1.expires_at - proposition1.created_at).days, 6)
+        self.assertGreaterEqual(
+            (proposition1.expires_at - proposition1.created_at).days, 6
+        )
         self.assertIsNone(proposition1.player1_first)
         self.assertIsNone(proposition1.player1_sign)
         self.assertIsNone(proposition1.player2_sign)
@@ -49,17 +54,25 @@ class TicTacToePropositionTestCase(TestCase):
             player2_content_type=self.tg_user.get_content_type(),
             player2_object_id=self.tg_user.id,
             player1_first=True,
-            player1_sign=PossibleSign.CROSS,
-            player2_sign=PossibleSign.NOUGHT,
+            player1_sign=TicTacToeProposition.PossibleSign.CROSS,
+            player2_sign=TicTacToeProposition.PossibleSign.NOUGHT,
         )
         self.assertEqual(proposition2.player1, self.user)
         self.assertEqual(proposition2.player2, self.tg_user)
-        self.assertEqual(proposition2.status, 'pending')
+        self.assertEqual(
+            proposition2.status, TicTacToeProposition.PossibleStatus.PENDING
+        )
         self.assertIsNone(proposition2.accepted_at)
-        self.assertGreaterEqual((proposition2.expires_at - proposition2.created_at).days, 6)
+        self.assertGreaterEqual(
+            (proposition2.expires_at - proposition2.created_at).days, 6
+        )
         self.assertTrue(proposition2.player1_first)
-        self.assertEqual(proposition2.player1_sign, PossibleSign.CROSS)
-        self.assertEqual(proposition2.player2_sign, PossibleSign.NOUGHT)
+        self.assertEqual(
+            proposition2.player1_sign, TicTacToeProposition.PossibleSign.CROSS
+        )
+        self.assertEqual(
+            proposition2.player2_sign, TicTacToeProposition.PossibleSign.NOUGHT
+        )
 
     def test_proposition_creation_with_two_users_without_all_fields(self):
         """Test that the proposition is created correctly with two users."""
@@ -69,17 +82,25 @@ class TicTacToePropositionTestCase(TestCase):
             player1_object_id=self.user.id,
             player2_content_type=self.tg_user.get_content_type(),
             player2_object_id=self.tg_user.id,
-            player1_sign=PossibleSign.CROSS,
-            player2_sign=PossibleSign.NOUGHT,
+            player1_sign=TicTacToeProposition.PossibleSign.CROSS,
+            player2_sign=TicTacToeProposition.PossibleSign.NOUGHT,
         )
         self.assertEqual(proposition3.player1, self.user)
         self.assertEqual(proposition3.player2, self.tg_user)
-        self.assertEqual(proposition3.status, 'incomplete')
+        self.assertEqual(
+            proposition3.status, TicTacToeProposition.PossibleStatus.INCOMPLETE
+        )
         self.assertIsNone(proposition3.accepted_at)
-        self.assertGreaterEqual((proposition3.expires_at - proposition3.created_at).days, 6)
+        self.assertGreaterEqual(
+            (proposition3.expires_at - proposition3.created_at).days, 6
+        )
         self.assertIsNone(proposition3.player1_first)
-        self.assertEqual(proposition3.player1_sign, PossibleSign.CROSS)
-        self.assertEqual(proposition3.player2_sign, PossibleSign.NOUGHT)
+        self.assertEqual(
+            proposition3.player1_sign, TicTacToeProposition.PossibleSign.CROSS
+        )
+        self.assertEqual(
+            proposition3.player2_sign, TicTacToeProposition.PossibleSign.NOUGHT
+        )
 
     def test_validation_player1_not_the_same_as_player2(self):
         """Test that the proposition is not created if player1 and player2 are the same."""
@@ -109,8 +130,8 @@ class TicTacToePropositionTestCase(TestCase):
                 player1_object_id=self.user.id,
                 player2_content_type=self.tg_user.get_content_type(),
                 player2_object_id=self.tg_user.id,
-                player1_sign=PossibleSign.CROSS,
-                player2_sign=PossibleSign.CROSS,
+                player1_sign=TicTacToeProposition.PossibleSign.CROSS,
+                player2_sign=TicTacToeProposition.PossibleSign.CROSS,
             )
 
     def test_validation_sign_is_possible_symbol(self):
@@ -121,8 +142,8 @@ class TicTacToePropositionTestCase(TestCase):
                 player1_object_id=self.user.id,
                 player2_content_type=self.tg_user.get_content_type(),
                 player2_object_id=self.tg_user.id,
-                player1_sign='X',  # Invalid sign
-                player2_sign=PossibleSign.NOUGHT,
+                player1_sign="X",  # Invalid sign
+                player2_sign=TicTacToeProposition.PossibleSign.NOUGHT,
             )
 
     def test_unset_accepted_status_with_incomplete_data(self):
@@ -131,6 +152,8 @@ class TicTacToePropositionTestCase(TestCase):
         proposition = TicTacToeProposition.objects.create(
             player1_content_type=self.user.get_content_type(),
             player1_object_id=self.user.id,
-            status="accepted",
+            status=TicTacToeProposition.PossibleStatus.INCOMPLETE,
         )
-        self.assertEqual(proposition.status, "incomplete")
+        self.assertEqual(
+            proposition.status, TicTacToeProposition.PossibleStatus.INCOMPLETE
+        )
